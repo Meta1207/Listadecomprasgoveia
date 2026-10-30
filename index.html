@@ -1,0 +1,1455 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Lista de Compras</title>
+<meta name="description" content="Lista de compras com total automático, gastos por categoria, limite do mês e histórico.">
+<meta name="theme-color" content="#2e9e5b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lista de Compras">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+[hidden]{display:none!important}
+:root{color-scheme:light;--bg:#f3f5ef;--surface:#ffffff;--fg:#1c261e;--muted:#5f6d61;--accent:#23663f;--on-accent:#ffffff;--danger:#a8322a;--line:#dce3d8;--warn:#b26a00}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#111812;--surface:#18221a;--fg:#e4eee4;--muted:#9aaa9c;--accent:#6fc392;--on-accent:#0c180f;--danger:#f08a80;--line:#2c3b2e;--warn:#e7b35a}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#111812;--surface:#18221a;--fg:#e4eee4;--muted:#9aaa9c;--accent:#6fc392;--on-accent:#0c180f;--danger:#f08a80;--line:#2c3b2e;--warn:#e7b35a}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px}
+main{max-width:480px;margin:0 auto}
+h1{font-size:24px;margin:0 0 12px;text-wrap:balance}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.form{display:grid;grid-template-columns:1fr 6.5rem;gap:8px}
+.form .full{grid-column:1/-1}
+input,select{font:inherit;width:100%;min-width:0;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+button{font:inherit;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;background:var(--accent);color:var(--on-accent)}
+button:disabled{opacity:.5;cursor:default}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.danger{background:var(--danger);color:#fff}
+.actions{display:flex;gap:8px;margin-top:8px}
+.actions button{flex:1}
+#msg,#gmsg,#lmsg{min-height:1.4em;color:var(--danger);font-size:14px;margin:8px 2px 0}
+.tabs{display:flex;gap:6px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.tabs button{background:transparent;color:var(--muted);border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:0;padding:10px 12px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-color:var(--line);background:var(--surface);font-weight:600}
+.painel[hidden]{display:none}
+.mes{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.mes input{width:auto}
+ul{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+li{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+li .nome{flex:1;min-width:0;overflow-wrap:anywhere}
+li .preco{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+li small{color:var(--muted);white-space:nowrap}
+li button{padding:4px 10px;background:transparent;color:var(--muted);border:1px solid var(--line)}
+.vazio{color:var(--muted);text-align:center;padding:24px 0}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.total strong{font-size:22px;font-variant-numeric:tabular-nums;color:var(--accent)}
+.rodape{margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.cat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cat span{display:block;color:var(--muted);font-size:14px}
+.cat strong{font-variant-numeric:tabular-nums;font-size:18px}
+.gform{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gform .full{grid-column:1/-1}
+.lim{margin-top:10px}
+.lim-head{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:6px}
+.lim-head b{font-variant-numeric:tabular-nums}
+.barra{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.barra i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px}
+.barra i.alerta{background:var(--warn)}
+.barra i.estouro{background:var(--danger)}
+.lim-head span,.lim-head b{color:#d9413a;font-weight:700}
+.lim .barra{background:#f6d4d1}
+select.catsel{width:auto;font-size:13px;padding:3px 8px;margin-top:4px;border-radius:6px;border-width:2px}
+select.catsel[data-cat="Compras"]{border-color:#2e9e5b}
+select.catsel[data-cat="Padaria"]{border-color:#f2b705}
+select.catsel[data-cat="Hortifruti"]{border-color:#e7772b}
+select.catsel[data-cat="Açougue"]{border-color:#d9413a}
+select.catsel[data-cat="Limpeza"]{border-color:#2f7fd1}
+select.catsel[data-cat="Higiene pessoal"]{border-color:#8e5bd6}
+select.catsel[data-cat="Outros"]{border-color:#6b7b8c}
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.lgrid label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.lgrid .full{grid-column:1/-1}
+.status{font-size:14px;color:var(--muted);margin-top:4px}
+.estab{margin-top:8px}
+.power-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:14px;width:100%}
+.power{width:84px;height:84px;padding:0;border-radius:50%;display:grid;place-items:center;background:#e9ece6;color:#8a948b;border:3px solid #cfd6cc;box-shadow:0 4px 12px rgba(0,0,0,.12);transition:background .2s,color .2s,box-shadow .2s,border-color .2s}
+.power svg{width:40px;height:40px}
+.power.ligado{background:#2e9e5b;color:#fff;border-color:#1f7a43;box-shadow:0 0 0 6px rgba(46,158,91,.25),0 0 22px rgba(46,158,91,.55)}
+.power.ligado.falando{background:#2f7fd1;border-color:#1e5fa3;box-shadow:0 0 0 6px rgba(47,127,209,.25),0 0 22px rgba(47,127,209,.55)}
+.power:disabled{opacity:.5}
+.power-txt{font-size:15px;font-weight:700;color:var(--fg)}
+.power-voz{font-size:12px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion: no-preference){.power.ligado:not(.falando){animation:pulsa 1.6s ease-in-out infinite}}
+@keyframes pulsa{50%{box-shadow:0 0 0 12px rgba(46,158,91,.12),0 0 26px rgba(46,158,91,.5)}}
+#msg.ok{color:var(--accent)}
+.dica{font-size:13px;color:var(--muted);margin:8px 2px 0}
+@keyframes desce{0%{transform:translateY(-14px);opacity:0;background:#fff3c4}60%{opacity:1;background:#fff3c4}100%{transform:none}}
+li.novo{animation:desce .9s ease-out}
+@media (prefers-reduced-motion: reduce){li.novo{animation:none}}
+h1{background:linear-gradient(90deg,#2e9e5b,#f2b705,#d9413a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tabs button{opacity:.6}
+.tabs button[data-tab="lista"]{background:#2e9e5b;color:#fff;border-color:#2e9e5b}
+.tabs button[data-tab="gastos"]{background:#f2b705;color:#1c261e;border-color:#f2b705}
+.tabs button[data-tab="limite"]{background:#d9413a;color:#fff;border-color:#d9413a}
+.tabs button[aria-selected="true"]{opacity:1;font-weight:700;box-shadow:inset 0 -4px 0 var(--fg)}
+.card{border-left:6px solid #2e9e5b}
+#p-gastos .card{border-left-color:#f2b705}
+#p-limite .card{border-left-color:#d9413a}
+li{border-left:4px solid #2e9e5b}
+.total{border-left:6px solid #f2b705}
+.cat{border-left:5px solid #2e9e5b}
+.cat:nth-child(2){border-left-color:#f2b705}
+.cat:nth-child(3){border-left-color:#e7772b}
+.cat:nth-child(4){border-left-color:#d9413a}
+.cat:nth-child(5){border-left-color:#2f7fd1}
+.cat:nth-child(6){border-left-color:#8e5bd6}
+.cat:nth-child(7){border-left-color:#6b7b8c}
+button.ghost{border-color:#2e9e5b}
+#finalizar{background:#d9413a;color:#fff}
+.finalizar{width:100%;margin-top:12px;padding:14px;font-size:17px;font-weight:600}
+.finalizar:disabled{opacity:.5}
+li.gasto{flex-direction:column;align-items:stretch;gap:0}
+.linha{display:flex;align-items:center;gap:8px}
+.itens{margin:8px 0 0;gap:2px;border-top:1px solid var(--line);padding-top:8px}
+.itens li{background:none;border:0;border-left:0;padding:2px 0;display:flex;justify-content:space-between;gap:8px;font-size:14px}
+#lista .btns{display:flex;flex-direction:column;gap:3px}
+#lista .btns button{font-size:11px;line-height:1.2;padding:3px 6px;min-width:54px;border-radius:6px}
+#lista .b-editar{color:#2f7fd1;border-color:#2f7fd1}
+#lista .b-remover{color:#d9413a;border-color:#d9413a}
+#lista .b-salvar{background:#2e9e5b;color:#fff;border-color:#2e9e5b}
+#lista li.editando{border-left-color:#2f7fd1}
+.edit-campos{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.edit-campos input{padding:8px 10px}
+.itens li span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+.resumo{background:linear-gradient(135deg,#2e9e5b,#1f7a43);color:#fff;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(31,122,67,.25)}
+.resumo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.resumo-box{border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:12px 8px;text-align:center}
+.resumo-box strong{display:block;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.15}
+.resumo-box span{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;margin-top:4px}
+.badge-wrap{text-align:center;margin-top:12px}
+.badge{display:inline-block;background:#f2b705;color:#1c261e;font-weight:700;border-radius:999px;padding:5px 14px;font-size:15px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge.vazio-b{background:rgba(255,255,255,.2);color:#fff;font-weight:500}
+.filtros{display:flex;gap:6px;overflow-x:auto;margin:16px 0 0;padding:4px;background:var(--line);border-radius:12px;scrollbar-width:none}
+.filtros::-webkit-scrollbar{display:none}
+.filtros button{flex:0 0 auto;background:transparent;color:var(--muted);border:0;padding:8px 14px;border-radius:9px;font-size:15px}
+.filtros button[aria-pressed="true"]{background:var(--surface);color:var(--accent);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+#lista li .ico{font-size:28px;width:40px;text-align:center;flex:0 0 40px;align-self:center}
+#lista li .meio{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+#lista li .meio .nome{font-weight:600}
+.qtd{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.qtd button{width:28px;height:28px;padding:0;border-radius:50%;font-size:17px;line-height:1;display:grid;place-items:center;color:var(--accent);border:1px solid var(--accent);background:transparent}
+.qtd b{min-width:18px;text-align:center;color:var(--fg);font-variant-numeric:tabular-nums}
+.precos{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.precos .unit{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.precos .sub{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.precos .sub b{color:var(--accent)}
+/* ---------- histórico ---------- */
+.tabs button{padding:10px 10px}
+.tabs button[data-tab="historico"]{background:#7470b5;color:#fff;border-color:#7470b5}
+#p-historico .card{border-left-color:#7470b5}
+.h-rot{font-size:15px;color:var(--muted);margin:0 0 8px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--line);border-radius:12px}
+.seg button{background:transparent;color:var(--muted);border:0;padding:9px 6px;border-radius:9px;font-size:16px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:#5a56a8;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.seg{gap:6px;background:transparent;padding:0}
+.seg button{font-weight:600;border:2px solid var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);opacity:.85}
+.seg button[data-p="ano"]{--c:#8e5bd6}
+.seg button[data-p="mes"]{--c:#2f7fd1}
+.seg button[data-p="semana"]{--c:#e7772b}
+.seg button[aria-pressed="true"]{background:var(--c);color:#fff;opacity:1;box-shadow:0 3px 10px color-mix(in srgb,var(--c) 45%,transparent)}
+.hstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.hstat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 10px;min-width:0}
+.hstat .hi{display:inline-grid;place-items:center;width:34px;height:24px;border-radius:8px;background:#e4e3f5;color:#5a56a8;font-size:13px;font-weight:700}
+.hstat span{display:block;color:var(--muted);font-size:14px;margin-top:8px}
+.hstat strong{display:block;font-size:16px;font-variant-numeric:tabular-nums;margin-top:2px;line-height:1.25;overflow-wrap:anywhere}
+button.hstat{font:inherit;text-align:left;color:var(--fg);cursor:pointer;position:relative;transition:transform .15s,box-shadow .15s}
+button.hstat.dest{color:#fff}
+button.hstat::after{content:"›";position:absolute;right:10px;top:8px;font-size:20px;opacity:.5}
+button.hstat[aria-expanded="true"]{box-shadow:0 0 0 3px #7470b5;transform:translateY(-1px)}
+.hdet{background:var(--surface);border:1px solid var(--line);border-left:5px solid #7470b5;border-radius:14px;padding:12px 14px;margin-top:10px}
+.hdet h3{margin:0 0 8px;font-size:16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hdet h3 button{background:transparent;color:var(--muted);border:1px solid var(--line);padding:2px 10px;font-size:13px}
+.hdet .lin{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
+.hdet .lin:first-of-type{border-top:0}
+.hdet .lin span{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.hdet .lin b{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.hdet .lin small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.hdet .sobe{color:#d9413a}.hdet .desce{color:#2e9e5b}
+button.hstat[data-det="media"]{background:linear-gradient(135deg,#f0a04b,#e7772b);border-color:#e7772b;color:#fff}
+button.hstat[data-det="compras"]{background:linear-gradient(135deg,#4a9be0,#2f7fd1);border-color:#2f7fd1;color:#fff}
+button.hstat[data-det="media"] span,button.hstat[data-det="compras"] span{color:rgba(255,255,255,.85)}
+button.hstat[data-det="media"] .hi,button.hstat[data-det="compras"] .hi{background:rgba(255,255,255,.25);color:#fff}
+button.hstat[data-det="media"][aria-expanded="true"]{box-shadow:0 0 0 3px #e7772b}
+button.hstat[data-det="compras"][aria-expanded="true"]{box-shadow:0 0 0 3px #2f7fd1}
+.hdet[data-cor="media"]{border-left-color:#e7772b}
+.hdet[data-cor="compras"]{border-left-color:#2f7fd1}
+.hstat.dest{background:linear-gradient(135deg,#7f7bc4,#5f5ba8);border-color:#5f5ba8;color:#fff}
+.hstat.dest span{color:rgba(255,255,255,.8)}
+.hstat.dest .hi{background:rgba(255,255,255,.25);color:#fff}
+.subtabs{display:grid;grid-template-columns:1fr 1fr;margin-top:14px;background:var(--line);border-radius:12px 12px 0 0;overflow:hidden}
+.subtabs button{background:transparent;color:var(--muted);border-radius:0;padding:12px;font-weight:600;letter-spacing:.05em;border-bottom:3px solid transparent}
+.subtabs button[aria-selected="true"]{color:#5a56a8;border-bottom-color:#7470b5}
+#hLista>li{border-left-color:#7470b5;flex-direction:column;align-items:stretch;gap:0}
+#hLista .nome small{display:block}
+#hLista .linha .nome b{display:block}
+.an-bloco{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}
+.an-bloco h3{font-size:15px;margin:0 0 10px}
+.an-lin{margin-bottom:10px}
+.an-lin:last-child{margin-bottom:0}
+.an-top{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:4px}
+.an-top b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.an-bar{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.an-bar i{display:block;height:100%;border-radius:999px}
+#lista li{align-items:flex-start;padding:10px}
+#lista li .ico{font-size:26px;width:32px;flex:0 0 32px;align-self:flex-start;margin-top:2px}
+#lista li .meio .nome{overflow-wrap:break-word;word-break:normal;line-height:1.3}
+.linha2{display:flex;justify-content:space-between;align-items:center;gap:6px 10px;flex-wrap:wrap}
+.linha2 .qtd{flex:0 0 auto}
+.linha2 .qtd button{flex:0 0 28px}
+.linha2 .precos{margin-left:auto}
+#lista li .meio select.catsel{max-width:100%;min-width:9rem;margin-top:2px}
+#lista li .btns{flex:0 0 auto;align-self:flex-start}
+/* filtros coloridos por categoria */
+.filtros{flex-wrap:nowrap;overflow-x:auto;background:transparent;padding:6px 2px 8px;gap:8px;scroll-snap-type:x proximity;scroll-padding:0 16px;-webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 22px),transparent)}
+.filtros button{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start}
+.filtros::after{content:"";flex:0 0 14px}
+.filtros button{--c:#5f6d61;border:2px solid var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent);font-size:14px;padding:6px 11px;font-weight:600;border-radius:999px}
+.filtros button[data-f="Todos"]{--c:#23663f}
+.filtros button[data-f="Compras"]{--c:#2e9e5b}
+.filtros button[data-f="Padaria"]{--c:#c99700}
+.filtros button[data-f="Hortifruti"]{--c:#e7772b}
+.filtros button[data-f="Açougue"]{--c:#d9413a}
+.filtros button[data-f="Limpeza"]{--c:#2f7fd1}
+.filtros button[data-f="Higiene pessoal"]{--c:#8e5bd6}
+.filtros button[data-f="Outros"]{--c:#6b7b8c}
+.filtros button[data-n="0"]{opacity:.75}
+.filtros button[aria-pressed="true"]{background:var(--c);color:#fff;opacity:1;box-shadow:0 3px 10px color-mix(in srgb,var(--c) 40%,transparent)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .filtros button[data-f="Todos"]{--c:#6fc392}}
+:root[data-theme="dark"] .filtros button[data-f="Todos"]{--c:#6fc392}
+/* compra única em Gastos */
+.gtop{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.gtop b{font-size:16px;overflow-wrap:break-word;min-width:0}
+.gtop .preco{font-size:17px}
+.gsub{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.gbtns{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+.gbtns button{padding:5px 12px;font-size:14px}
+.gchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.gchip{font-style:normal;font-size:11.5px;font-weight:600;color:var(--c);border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);border-radius:999px;padding:1px 7px;white-space:nowrap}
+.gdet{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:8px}
+.gcat{border-left:4px solid var(--c);padding-left:10px}
+.gcat-h{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:700;color:var(--c)}
+.gcat-h b{font-variant-numeric:tabular-nums}
+.gcat .itens{margin-top:4px;border-top:0;padding-top:0}
+.gtot{display:flex;justify-content:space-between;gap:8px;border-top:2px solid var(--line);padding-top:8px;font-weight:700}
+.gtot b{font-variant-numeric:tabular-nums;color:var(--accent);font-size:17px}
+#gastos .linha button.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.lgrid label.lc{color:var(--c);font-weight:700}
+.lgrid label.lc input{border:2px solid var(--c);background:color-mix(in srgb,var(--c) 10%,var(--bg));font-weight:600;color:var(--fg)}
+.lgrid label.lc input:focus-visible{outline:2px solid var(--c);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 25%,transparent)}
+.lgrid label.lc input::placeholder{color:color-mix(in srgb,var(--c) 55%,var(--muted))}
+.lgrid label.lc-total input{font-size:18px}
+#lform button[type="submit"]{background:linear-gradient(90deg,#2e9e5b,#2f7fd1);color:#fff;font-weight:700}
+#limCats .cat{background:color-mix(in srgb,var(--cc,#2e9e5b) 9%,var(--surface))}
+#limCats .cat:nth-child(1){--cc:#2e9e5b}#limCats .cat:nth-child(2){--cc:#f2b705}#limCats .cat:nth-child(3){--cc:#e7772b}
+#limCats .cat:nth-child(4){--cc:#d9413a}#limCats .cat:nth-child(5){--cc:#2f7fd1}#limCats .cat:nth-child(6){--cc:#8e5bd6}#limCats .cat:nth-child(7){--cc:#6b7b8c}
+#limCats .cat > span:first-child{color:var(--cc);font-weight:700}
+#limCats .cat{border-left-color:var(--cc)}
+.lgrid label.lc input{margin-top:auto}
+.edit-campos .lin2{display:grid;grid-template-columns:1fr 5rem;gap:6px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Lista de Compras</h1>
+
+  <div class="tabs" role="tablist" aria-label="Seções">
+    <button type="button" role="tab" id="t-lista" aria-selected="true" aria-controls="p-lista" data-tab="lista">Lista</button>
+    <button type="button" role="tab" id="t-gastos" aria-selected="false" aria-controls="p-gastos" data-tab="gastos">Gastos</button>
+    <button type="button" role="tab" id="t-limite" aria-selected="false" aria-controls="p-limite" data-tab="limite">Limite</button>
+    <button type="button" role="tab" id="t-historico" aria-selected="false" aria-controls="p-historico" data-tab="historico">Histórico</button>
+  </div>
+
+  <!-- LISTA -->
+  <section id="p-lista" class="painel" role="tabpanel" aria-labelledby="t-lista">
+    <section class="resumo" aria-label="Resumo do carrinho">
+      <div class="resumo-grid">
+        <div class="resumo-box"><strong id="rTotal">R$ 0,00</strong><span>Total</span></div>
+        <div class="resumo-box"><strong id="rItens">0</strong><span id="rItensLbl">Itens</span></div>
+      </div>
+      <div class="badge-wrap"><span id="rLoja" class="badge vazio-b">Sem estabelecimento</span></div>
+    </section>
+    <section class="card">
+      <form id="form" class="form" novalidate>
+        <input id="nome" class="full" placeholder="Produto (ex: arroz)" autocomplete="off" aria-label="Produto">
+        <input id="preco" placeholder="Preço (ex: 5,50)" inputmode="decimal" autocomplete="off" aria-label="Preço">
+        <button type="submit">Adicionar</button>
+      </form>
+      <input id="estab" class="estab" placeholder="Estabelecimento (ex: Supermercado BH, Economart)" autocomplete="off" aria-label="Estabelecimento">
+      <div class="power-wrap">
+        <button type="button" id="mic" class="power" aria-pressed="false" aria-label="Ligar assistente de voz">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+        </button>
+        <span id="powerTxt" class="power-txt">Voz desligada</span>
+        <span id="powerVoz" class="power-voz"></span>
+      </div>
+      <p class="dica">Toque no botão power, fale o produto e o preço (ex: “arroz cinco e cinquenta”) e depois diga <b>“adiciona”</b> (ou <b>“pronto”</b>). Para o estabelecimento, diga por exemplo <b>“supermercado BH”</b> ou <b>“estou no Economart”</b>. A voz do Google confirma tudo. Funciona também com o microfone do teclado do celular.</p>
+      <p id="msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <div id="filtros" class="filtros" role="group" aria-label="Filtrar por categoria" hidden></div>
+    <ul id="lista" aria-label="Itens da lista"></ul>
+    <div id="vazioCat" class="vazio" hidden></div>
+    <div id="vazio" class="vazio" hidden>Sua lista está vazia. Digite ou fale um produto acima.</div>
+
+    <div class="total">
+      <span>Total</span>
+      <strong id="total">R$ 0,00</strong>
+    </div>
+
+    <button type="button" id="finalizar" class="finalizar">Finalizar compra</button>
+
+    <div class="rodape">
+      <span id="contagem"></span>
+      <button type="button" id="limpar" class="ghost">Limpar lista</button>
+    </div>
+  </section>
+
+  <!-- GASTOS -->
+  <section id="p-gastos" class="painel" role="tabpanel" aria-labelledby="t-gastos" hidden>
+    <div class="mes">
+      <span>Mês</span>
+      <input type="month" id="mesSel" aria-label="Mês">
+    </div>
+
+    <div class="cats" id="cats"></div>
+
+    <section class="card">
+      <form id="gform" class="gform" novalidate>
+        <select id="gcat" aria-label="Categoria">
+          <option value="Compras">Compras</option>
+          <option value="Padaria">Padaria</option>
+          <option value="Hortifruti">Hortifruti</option>
+          <option value="Açougue">Açougue</option>
+          <option value="Limpeza">Limpeza</option>
+          <option value="Higiene pessoal">Higiene pessoal</option>
+          <option value="Outros">Outros</option>
+        </select>
+        <input id="gvalor" placeholder="Valor (ex: 42,90)" inputmode="decimal" autocomplete="off" aria-label="Valor">
+        <input id="gdata" type="date" class="full" aria-label="Data">
+        <button type="submit" class="full">Adicionar gasto</button>
+      </form>
+      <p id="gmsg" role="status" aria-live="polite"></p>
+    </section>
+
+    <ul id="gastos" aria-label="Gastos do mês"></ul>
+    <div id="gvazio" class="vazio" hidden>Nenhum gasto neste mês.</div>
+
+    <div class="total">
+      <span>Total do mês</span>
+      <strong id="gtotal">R$ 0,00</strong>
+    </div>
+  </section>
+
+  <!-- LIMITE -->
+  <section id="p-limite" class="painel" role="tabpanel" aria-labelledby="t-limite" hidden>
+    <div class="mes">
+      <span>Mês</span>
+      <span id="limMes" style="font-weight:600"></span>
+    </div>
+
+    <section class="card">
+      <div class="lim">
+        <div class="lim-head"><span>Limite do mês</span><b id="limTxt">—</b></div>
+        <div class="barra"><i id="limBarra"></i></div>
+        <p class="status" id="limStatus"></p>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <form id="lform" class="lgrid" novalidate>
+        <label class="full lc lc-total" style="--c:#d9413a">🎯 Limite total do mês (R$)
+          <input id="lTotal" inputmode="decimal" placeholder="Ex: 1.200,00" autocomplete="off">
+        </label>
+        <label class="lc" style="--c:#2e9e5b">🛒 Compras (R$)<input id="lCompras" inputmode="decimal" autocomplete="off"></label>
+        <label class="lc" style="--c:#c99700">🥖 Padaria (R$)<input id="lPadaria" inputmode="decimal" autocomplete="off"></label>
+        <label class="lc" style="--c:#e7772b">🥬 Hortifruti (R$)<input id="lHortifruti" inputmode="decimal" autocomplete="off"></label>
+        <label class="lc" style="--c:#d9413a">🥩 Açougue (R$)<input id="lAcougue" inputmode="decimal" autocomplete="off"></label>
+        <label class="lc" style="--c:#2f7fd1">🧽 Limpeza (R$)<input id="lLimpeza" inputmode="decimal" autocomplete="off"></label>
+        <label class="lc" style="--c:#8e5bd6">🧴 Higiene pessoal (R$)<input id="lHigiene" inputmode="decimal" autocomplete="off"></label>
+        <label class="lc" style="--c:#6b7b8c">📦 Outros (R$)<input id="lOutros" inputmode="decimal" autocomplete="off"></label>
+        <button type="submit" class="full">Salvar limites</button>
+      </form>
+      <p id="lmsg" role="status" aria-live="polite"></p>
+    </section>
+
+    <div id="limCats" class="cats" style="margin-top:12px"></div>
+  </section>
+  <!-- HISTÓRICO -->
+  <section id="p-historico" class="painel" role="tabpanel" aria-labelledby="t-historico" hidden>
+    <p class="h-rot">Filtrar pelo último:</p>
+    <div class="seg" id="hPer" role="group" aria-label="Período">
+      <button type="button" data-p="ano" aria-pressed="false">Ano</button>
+      <button type="button" data-p="mes" aria-pressed="false">Mês</button>
+      <button type="button" data-p="semana" aria-pressed="true">Semana</button>
+    </div>
+    <div class="hstats">
+      <button type="button" class="hstat" data-det="media" aria-expanded="false" aria-controls="hDet"><i class="hi" aria-hidden="true">▮▮</i><span>Média</span><strong id="hMedia">R$ 0,00</strong></button>
+      <button type="button" class="hstat" data-det="compras" aria-expanded="false" aria-controls="hDet"><i class="hi" aria-hidden="true">🛍</i><span>Compras</span><strong id="hQtd">0</strong></button>
+      <button type="button" class="hstat dest" data-det="total" aria-expanded="false" aria-controls="hDet"><i class="hi" aria-hidden="true">R$</i><span>Total</span><strong id="hTotal">R$ 0,00</strong></button>
+    </div>
+    <div id="hDet" class="hdet" hidden aria-live="polite"></div>
+    <div class="subtabs" role="tablist" aria-label="Histórico ou análise">
+      <button type="button" role="tab" data-sub="hist" aria-selected="true">HISTÓRICO</button>
+      <button type="button" role="tab" data-sub="anal" aria-selected="false">ANÁLISE</button>
+    </div>
+    <div id="hSecHist">
+      <p class="h-rot" style="margin-top:14px">Histórico de compras:</p>
+      <ul id="hLista" aria-label="Histórico de compras" style="margin-top:0"></ul>
+      <div id="hVazio" class="vazio" hidden>Nenhuma compra neste período. Finalize uma compra na aba Lista para ela aparecer aqui.</div>
+    </div>
+    <div id="hSecAnal" hidden>
+      <div class="an-bloco"><h3>Gasto por categoria</h3><div id="anCats"></div></div>
+      <div class="an-bloco"><h3>Produtos em que mais gastou</h3><div id="anProd"></div></div>
+      <div class="an-bloco"><h3>Onde você comprou</h3><div id="anLojas"></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const KEY = 'lista-compras-v1';
+  const GKEY = 'gastos-compras-v1';
+  const LKEY = 'limites-compras-v1';
+  const CATS = ['Compras', 'Padaria', 'Hortifruti', 'Açougue', 'Limpeza', 'Higiene pessoal', 'Outros'];
+  const CAT_IDS = { Compras: 'lCompras', Padaria: 'lPadaria', Hortifruti: 'lHortifruti', 'Açougue': 'lAcougue', Limpeza: 'lLimpeza', 'Higiene pessoal': 'lHigiene', Outros: 'lOutros' };
+
+  let itens = [], gastos = [], limites = { total: null, cats: {} };
+  try { itens = JSON.parse(localStorage.getItem(KEY) || '[]'); if (!Array.isArray(itens)) itens = []; } catch (e) { itens = []; }
+  try { gastos = JSON.parse(localStorage.getItem(GKEY) || '[]'); if (!Array.isArray(gastos)) gastos = []; } catch (e) { gastos = []; }
+  try { const l = JSON.parse(localStorage.getItem(LKEY) || 'null'); if (l && typeof l === 'object') limites = { total: l.total ?? null, cats: l.cats || {} }; } catch (e) {}
+
+  const $ = id => document.getElementById(id);
+  const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const msg = t => { $('msg').textContent = t || ''; };
+  const gmsg = t => { $('gmsg').textContent = t || ''; };
+  const lmsg = t => { $('lmsg').textContent = t || ''; };
+  const r2 = v => Math.round(v * 100) / 100;
+  const qtdDe = it => (it && it.qtd > 0 ? it.qtd : 1);
+  const subtotal = it => r2(it.preco * qtdDe(it));
+  const somaItens = arr => r2(arr.reduce((s, it) => s + subtotal(it), 0));
+
+  const hojeISO = () => {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  };
+  const mesAtual = () => hojeISO().slice(0, 7);
+  const formatData = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+  const formatMes = mes => { const [y, m] = mes.split('-'); return `${m}/${y}`; };
+
+  function parsePreco(s) {
+    let v = String(s).trim().replace(/R\$|\s/g, '');
+    if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+    return parseFloat(v);
+  }
+
+  // ---------- categoria automática ----------
+  const semAcento = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/-/g, ' ');
+  const FORA = ['suco', 'molho', 'extrato', 'geleia', 'iogurte', 'bolacha', 'biscoito recheado', 'refrigerante', 'sorvete',
+    'tempero', 'caldo', 'racao', 'oleo', 'chips', 'gelatina', 'achocolatado', 'refresco',
+    'leite de coco', 'coco ralado', 'batata palha', 'mistura', 'sabor', 'essencia', 'doce de', 'salgadinho'];
+  const PALAVRAS = {
+    'Higiene pessoal': ['sabonete', 'shampoo', 'xampu', 'condicionador', 'creme de pentear', 'creme dental', 'pasta de dente',
+      'escova de dente', 'escova dental', 'fio dental', 'enxaguante bucal', 'antisseptico bucal', 'desodorante', 'antitranspirante',
+      'papel higienico', 'absorvente', 'protetor diario', 'fralda', 'lenco umedecido', 'cotonete', 'hastes flexiveis', 'algodao',
+      'aparelho de barbear', 'barbeador', 'lamina de barbear', 'espuma de barbear', 'gilete', 'hidratante', 'creme hidratante',
+      'protetor solar', 'filtro solar', 'repelente', 'alcool gel', 'talco', 'perfume', 'colonia', 'esmalte', 'acetona',
+      'removedor de esmalte', 'tintura', 'gel de cabelo', 'pomada de cabelo', 'lenco de papel', 'curativo', 'band aid'],
+    'Limpeza': ['detergente', 'sabao', 'sabao em po', 'sabao liquido', 'sabao em barra', 'lava roupa', 'lava roupas', 'lava loucas',
+      'amaciante', 'agua sanitaria', 'cloro', 'alvejante', 'tira manchas', 'desinfetante', 'multiuso', 'limpador', 'limpa vidro',
+      'limpa vidros', 'lustra moveis', 'cera', 'desengordurante', 'saponaceo', 'pedra sanitaria', 'bloco sanitario', 'alcool',
+      'esponja', 'palha de aco', 'bombril', 'pano de chao', 'pano de prato', 'flanela', 'perfex', 'vassoura', 'rodo', 'pa de lixo',
+      'balde', 'escova sanitaria', 'saco de lixo', 'sacos de lixo', 'papel toalha', 'luva', 'luvas', 'inseticida', 'naftalina',
+      'odorizador', 'aromatizador', 'neutralizador', 'veja', 'ype', 'omo'],
+    'Padaria': ['pao', 'paes', 'pao frances', 'pao de queijo', 'pao de forma', 'pao doce', 'bisnaga', 'bisnaguinha', 'broa',
+      'bolo', 'rosca', 'croissant', 'sonho', 'baguete', 'torrada', 'salgado', 'coxinha', 'esfirra', 'esfiha', 'biscoito de polvilho', 'brioche'],
+    'Açougue': ['carne', 'carne moida', 'bife', 'picanha', 'alcatra', 'maminha', 'patinho', 'acem', 'musculo', 'costela', 'costelinha',
+      'contrafile', 'contra file', 'file mignon', 'cupim', 'fraldinha', 'lagarto', 'coxao', 'chuleta', 'figado', 'coracao', 'moela',
+      'frango', 'coxa', 'sobrecoxa', 'asa', 'asinha', 'peito de frango', 'linguica', 'salsicha', 'calabresa', 'bacon', 'pernil',
+      'lombo', 'porco', 'suino', 'bisteca', 'panceta', 'cordeiro', 'carneiro', 'hamburguer', 'almondega', 'kafta', 'peru', 'chester',
+      'peixe', 'tilapia', 'salmao', 'bacalhau', 'merluza', 'pescada', 'sardinha', 'camarao', 'miudos', 'mocoto', 'rabada', 'torresmo', 'file'],
+    'Hortifruti': ['fruta', 'verdura', 'legume', 'alface', 'tomate', 'cebola', 'alho', 'alho poro', 'batata', 'cenoura', 'beterraba',
+      'abobrinha', 'abobora', 'chuchu', 'pepino', 'pimentao', 'repolho', 'couve', 'brocolis', 'espinafre', 'rucula', 'agriao',
+      'cheiro verde', 'salsinha', 'salsa', 'cebolinha', 'coentro', 'hortela', 'manjericao', 'mandioca', 'aipim', 'macaxeira', 'inhame',
+      'quiabo', 'jilo', 'berinjela', 'vagem', 'milho verde', 'gengibre', 'banana', 'maca', 'laranja', 'limao', 'limoes', 'mamao', 'manga',
+      'abacaxi', 'melancia', 'melao', 'uva', 'morango', 'pera', 'abacate', 'goiaba', 'maracuja', 'tangerina', 'mexerica', 'bergamota',
+      'kiwi', 'coco', 'ameixa', 'pessego', 'acerola', 'caju', 'caqui', 'graviola', 'pitaya', 'cogumelo']
+  };
+  const temPalavra = (txt, w) =>
+    new RegExp('(^|[^a-z0-9])' + w.replace(/ /g, '\\s+') + '(s|es)?(?=$|[^a-z0-9])').test(txt);
+  // Coisas que não são de comer nem de limpeza/higiene
+  const OUTROS = ['racao', 'areia de gato', 'areia sanitaria', 'pilha', 'bateria', 'lampada', 'carvao', 'botijao', 'gas de cozinha', 'vela', 'fosforo', 'isqueiro',
+    'remedio', 'medicamento', 'dipirona', 'paracetamol', 'cigarro', 'presente', 'brinquedo', 'carregador', 'cabo usb', 'fita adesiva', 'durex',
+    'caneta', 'caderno', 'papel sulfite', 'tesoura', 'copo descartavel', 'prato descartavel', 'guardanapo', 'papel aluminio', 'filme plastico',
+    'planta', 'adubo', 'chinelo', 'recarga'];
+  function categoria(nome) {
+    const t = semAcento(nome);
+    for (const c of ['Higiene pessoal', 'Limpeza']) {
+      if (PALAVRAS[c].some(w => temPalavra(t, w))) return c;
+    }
+    if (OUTROS.some(w => temPalavra(t, w))) return 'Outros';
+    if (FORA.some(w => temPalavra(t, w))) return 'Compras';
+    for (const c of ['Padaria', 'Açougue', 'Hortifruti']) {
+      if (PALAVRAS[c].some(w => temPalavra(t, w))) return c;
+    }
+    return 'Compras';
+  }
+
+  // ---------- ícone do produto ----------
+  const ICONES = [
+    ['molho de tomate', '🥫'], ['extrato', '🥫'], ['macarrao', '🍝'], ['espaguete', '🍝'], ['massa', '🍝'], ['lasanha', '🍝'],
+    ['arroz', '🍚'], ['feijao', '🫘'], ['leite', '🥛'], ['cafe', '☕'], ['acucar', '🍬'], ['sal', '🧂'], ['oleo', '🫒'], ['azeite', '🫒'],
+    ['ovo', '🥚'], ['queijo', '🧀'], ['manteiga', '🧈'], ['margarina', '🧈'], ['iogurte', '🥛'], ['presunto', '🥓'], ['bacon', '🥓'],
+    ['refrigerante', '🥤'], ['suco', '🧃'], ['agua', '💧'], ['cerveja', '🍺'], ['vinho', '🍷'], ['chocolate', '🍫'], ['biscoito', '🍪'], ['bolacha', '🍪'],
+    ['pao', '🍞'], ['bolo', '🍰'], ['croissant', '🥐'], ['farinha', '🌾'], ['milho', '🌽'], ['pipoca', '🍿'], ['sorvete', '🍨'],
+    ['linguica', '🌭'], ['salsicha', '🌭'], ['frango', '🍗'], ['coxa', '🍗'], ['peixe', '🐟'], ['tilapia', '🐟'], ['salmao', '🐟'], ['camarao', '🦐'],
+    ['carne', '🥩'], ['bife', '🥩'], ['picanha', '🥩'], ['hamburguer', '🍔'],
+    ['tomate', '🍅'], ['banana', '🍌'], ['maca', '🍎'], ['laranja', '🍊'], ['limao', '🍋'], ['uva', '🍇'], ['morango', '🍓'], ['melancia', '🍉'],
+    ['abacaxi', '🍍'], ['manga', '🥭'], ['abacate', '🥑'], ['batata', '🥔'], ['cenoura', '🥕'], ['cebola', '🧅'], ['alho', '🧄'], ['alface', '🥬'],
+    ['brocolis', '🥦'], ['pimentao', '🫑'], ['pepino', '🥒'], ['cogumelo', '🍄'],
+    ['papel higienico', '🧻'], ['papel toalha', '🧻'], ['sabonete', '🧼'], ['sabao', '🧼'], ['detergente', '🧴'], ['shampoo', '🧴'], ['escova', '🪥'], ['esponja', '🧽']
+  ];
+  const ICONE_CAT = { Compras: '🛒', Padaria: '🥖', Hortifruti: '🥬', 'Açougue': '🥩', Limpeza: '🧽', 'Higiene pessoal': '🧴', Outros: '📦' };
+  function icone(it) {
+    const t = semAcento(it.nome);
+    const achou = ICONES.find(([w]) => temPalavra(t, w));
+    return achou ? achou[1] : (ICONE_CAT[it.cat] || '🛒');
+  }
+
+  function salvar() { try { localStorage.setItem(KEY, JSON.stringify(itens)); } catch (e) {} renderLista(); }
+  function salvarGastos() { try { localStorage.setItem(GKEY, JSON.stringify(gastos)); } catch (e) {} renderGastos(); renderLimite(); renderHistorico(); }
+  function salvarLimites() { try { localStorage.setItem(LKEY, JSON.stringify(limites)); } catch (e) {} renderLimite(); }
+
+  // ---------- abas ----------
+  function mostrarAba(nome) {
+    document.querySelectorAll('.tabs [role="tab"]').forEach(t => {
+      const sel = t.dataset.tab === nome;
+      t.setAttribute('aria-selected', sel ? 'true' : 'false');
+    });
+    ['lista', 'gastos', 'limite', 'historico'].forEach(n => { $('p-' + n).hidden = n !== nome; });
+    if (nome === 'limite') renderLimite();
+    if (nome === 'historico') renderHistorico();
+  }
+  document.querySelectorAll('.tabs [role="tab"]').forEach(t =>
+    t.addEventListener('click', () => mostrarAba(t.dataset.tab)));
+
+  // ---------- lista ----------
+  let editando = -1;
+  let filtro = 'Todos';
+  function renderFiltros() {
+    $('filtros').hidden = itens.length === 0;
+    const rolagem = $('filtros').scrollLeft;
+    $('filtros').innerHTML = ['Todos', ...CATS].map(c => {
+      const n = c === 'Todos' ? itens.length : itens.filter(it => it.cat === c).length;
+      return `<button type="button" data-f="${esc(c)}" data-n="${n}" aria-pressed="${c === filtro}">${c === 'Todos' ? '🛒 ' : (ICONE_CAT[c] || '') + ' '}${esc(c)} (${n})</button>`;
+    }).join('');
+    $('filtros').scrollLeft = rolagem;
+    const vazioCat = filtro !== 'Todos' && itens.length && !itens.some(it => it.cat === filtro);
+    $('vazioCat').hidden = !vazioCat;
+    if (vazioCat) $('vazioCat').textContent = 'Nenhum item em ' + filtro + ' na lista.';
+  }
+  function renderResumo() {
+    const tot = somaItens(itens);
+    const unid = itens.reduce((s, it) => s + qtdDe(it), 0);
+    $('rTotal').textContent = brl(tot);
+    $('rItens').textContent = itens.length;
+    $('rItensLbl').textContent = (itens.length === 1 ? 'Item' : 'Itens') + (unid !== itens.length ? ` · ${unid} un.` : '');
+    const loja = $('estab').value.trim();
+    $('rLoja').textContent = loja || 'Sem estabelecimento';
+    $('rLoja').classList.toggle('vazio-b', !loja);
+  }
+  function renderLista() {
+    if (editando >= itens.length) editando = -1;
+    renderFiltros();
+    $('lista').innerHTML = itens.map((it, i) => {
+      if (filtro !== 'Todos' && it.cat !== filtro && i !== editando) return '';
+      if (i === editando) {
+        return `<li class="editando" data-idx="${i}"><div class="edit-campos"><input class="ed-nome" value="${esc(it.nome)}" aria-label="Nome do produto" autocomplete="off"><div class="lin2"><input class="ed-preco" value="${it.preco.toFixed(2).replace('.', ',')}" inputmode="decimal" aria-label="Preço unitário" autocomplete="off"><input class="ed-qtd" value="${qtdDe(it)}" inputmode="numeric" aria-label="Quantidade" autocomplete="off"></div></div><div class="btns"><button type="button" class="b-salvar" data-salvar="${i}">Salvar</button><button type="button" class="b-cancelar" data-cancelar="${i}">Cancelar</button></div></li>`;
+      }
+      const q = qtdDe(it);
+      return `<li data-idx="${i}"><span class="ico" aria-hidden="true">${icone(it)}</span><div class="meio"><span class="nome">${esc(it.nome)}</span><div class="linha2"><div class="qtd"><span>Qtd:</span><button type="button" data-menos="${i}" aria-label="Diminuir quantidade de ${esc(it.nome)}">−</button><b>${q}</b><button type="button" data-mais="${i}" aria-label="Aumentar quantidade de ${esc(it.nome)}">+</button></div><div class="precos"><span class="unit">${brl(it.preco)}</span>${q > 1 ? `<span class="sub">Subtotal <b>${brl(subtotal(it))}</b></span>` : ''}</div></div><select class="catsel" data-ci="${i}" data-cat="${esc(it.cat)}" aria-label="Categoria de ${esc(it.nome)}">${CATS.map(c => `<option${c === it.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div><div class="btns"><button type="button" class="b-editar" data-e="${i}" aria-label="Editar ${esc(it.nome)}">Editar</button><button type="button" class="b-remover" data-i="${i}" aria-label="Remover ${esc(it.nome)}">Remover</button></div></li>`;
+    }).join('');
+    $('vazio').hidden = itens.length > 0;
+    $('total').textContent = brl(somaItens(itens));
+    const unid = itens.reduce((s, it) => s + qtdDe(it), 0);
+    $('contagem').textContent = itens.length ? itens.length + (itens.length === 1 ? ' item' : ' itens') + (unid !== itens.length ? ` (${unid} unidades)` : '') : '';
+    $('limpar').disabled = itens.length === 0;
+    $('finalizar').disabled = itens.length === 0;
+    renderResumo();
+  }
+
+  function adicionar(nome, preco) {
+    nome = String(nome || '').trim().replace(/\s+/g, ' ');
+    if (!nome) { msg('Digite o nome do produto.'); return false; }
+    if (!isFinite(preco) || preco <= 0) { msg('Digite um preço válido, como 5,50.'); return false; }
+    nome = nome.charAt(0).toUpperCase() + nome.slice(1);
+    preco = r2(preco);
+    let it = itens.find(x => semAcento(x.nome) === semAcento(nome) && x.preco === preco);
+    if (it) it.qtd = qtdDe(it) + 1;
+    else { it = { nome, preco, qtd: 1, cat: categoria(nome) }; itens.push(it); }
+    msg('');
+    if (filtro !== 'Todos' && filtro !== it.cat) filtro = 'Todos';
+    salvar();
+    return it;
+  }
+
+  const ok = t => { $('msg').textContent = t; $('msg').classList.add('ok'); };
+
+  // ---------- estabelecimento por voz ----------
+  // "supermercado BH", "mercado Economart", "estou no Carrefour", "estabelecimento Dia"
+  const TIPOS_LOJA = /^(?:super\s?mercado|hiper\s?mercado|mercado|mercadinho|mercearia|atacad[aã]o|atacarejo|sacol[aã]o|emp[oó]rio|feira|loja|farm[aá]cia|drogaria|padaria|a[çc]ougue|hortifruti|quitanda)(?![a-zà-ú])/i;
+  function comoMercado(texto) {
+    let t = String(texto || '').trim().replace(/[.,!?]+$/, '').trim();
+    if (!t) return null;
+    const m = t.match(/^(?:o\s+|a\s+)?(?:estabelecimento|local)(?:\s+(?:é|e))?\s+(?:o\s+|a\s+)?(.+)$/i)
+      || t.match(/^(?:estou|tô|to|t[ôo]|comprando|compras?)\s+n[oa]\s+(.+)$/i);
+    if (m) t = m[1].trim();
+    else if (!TIPOS_LOJA.test(t) || interpretarFala(t)) return null; // com preço é produto
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : null;
+  }
+  function definirMercado(nome) {
+    $('estab').value = nome;
+    renderResumo();
+    ok('🏪 Estabelecimento: ' + nome);
+    falar('Estabelecimento: ' + nome + '.');
+  }
+
+  // Lança o que está nos campos na lista e destaca o item descendo
+  function enviarCampos() {
+    $('msg').classList.remove('ok');
+    let n = $('nome').value;
+    const pv = $('preco').value.trim();
+    // O campo Preço só vale direto se tiver apenas o valor ("8", "8,50", "R$ 8"); "2 quilos" lá é quantidade
+    let preco = /^(?:R\$\s*)?\d+(?:[.,]\d{1,2})?$/i.test(pv) ? parsePreco(pv) : NaN;
+    if (!(isFinite(preco) && preco > 0)) {
+      const tudo = (n + ' ' + pv).trim();
+      const r = interpretarFala(tudo);
+      if (r && r.nome) { n = r.nome; preco = r.preco; }
+      else if (pv) {
+        // Sem preço: a quantidade vai para o nome e o campo Preço fica livre para o valor
+        n = numerosFalados(tudo).replace(/(?<!\d),|,(?!\d)/g, ' ').replace(/\s+/g, ' ').trim();
+        $('nome').value = n; $('preco').value = '';
+      }
+    }
+    if (!(isFinite(preco) && preco > 0)) {
+      const merc = comoMercado(n);
+      if (merc) { $('nome').value = ''; $('preco').value = ''; definirMercado(merc); return true; }
+    }
+    const it = adicionar(n, preco);
+    if (!it) return false;
+    $('nome').value = ''; $('preco').value = '';
+    const li = $('lista').querySelector(`li[data-idx="${itens.indexOf(it)}"]`);
+    if (li) li.classList.add('novo');
+    const q = qtdDe(it);
+    ok('✓ ' + it.nome + ' (' + brl(it.preco) + ')' + (q > 1 ? ' — quantidade: ' + q : ' adicionado.'));
+    const tot = somaItens(itens);
+    falar(it.nome + ', ' + valorFalado(it.preco) + (q > 1 ? ', agora são ' + q : ', adicionado') + '. Total: ' + valorFalado(tot) + '.');
+    return true;
+  }
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (enviarCampos()) $('nome').focus();
+  });
+
+  // Dizer "adiciona" pelo microfone do teclado também lança o item
+  const TEM_ADD = /(^|[\s.,!?])(?:adicion(?:a|ar|e|ado|ou)|pronto|lança|lançar)(?![a-zà-ú])[.,!?]*/i;
+  ['nome', 'preco'].forEach(id => {
+    const el = $(id);
+    let t;
+    const verificar = () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        if (!TEM_ADD.test(el.value)) return;
+        // Tira o foco para o teclado terminar de escrever antes de mexer no campo
+        el.blur();
+        setTimeout(() => {
+          const m = el.value.match(TEM_ADD);
+          if (!m) return;
+          const antes = el.value.slice(0, m.index + m[1].length).trim();
+          const depois = el.value.slice(m.index + m[0].length).trim();
+          el.value = antes;
+          const foi = enviarCampos();
+          if (foi && depois) $('nome').value = depois;
+          $('nome').focus();
+        }, 80);
+      }, 600);
+    };
+    ['input', 'compositionend', 'change', 'keyup'].forEach(ev => el.addEventListener(ev, verificar));
+  });
+
+  function salvarEdicao(i, li) {
+    const it = itens[i];
+    if (!it) return;
+    let nome = li.querySelector('.ed-nome').value.trim().replace(/\s+/g, ' ');
+    const preco = parsePreco(li.querySelector('.ed-preco').value);
+    const qtd = parseInt(li.querySelector('.ed-qtd').value, 10);
+    $('msg').classList.remove('ok');
+    if (!(qtd >= 1)) { msg('Digite uma quantidade de 1 para cima.'); return; }
+    if (!nome) { msg('Digite o nome do produto.'); return; }
+    if (!isFinite(preco) || preco <= 0) { msg('Digite um preço válido, como 5,50.'); return; }
+    nome = nome.charAt(0).toUpperCase() + nome.slice(1);
+    if (nome !== it.nome) it.cat = categoria(nome);
+    it.nome = nome; it.preco = r2(preco); it.qtd = qtd;
+    editando = -1;
+    salvar();
+    ok('✓ ' + it.nome + ' atualizado.');
+  }
+
+  $('filtros').addEventListener('click', e => {
+    const b = e.target.closest('button[data-f]');
+    if (!b) return;
+    filtro = b.dataset.f;
+    const x = $('filtros').scrollLeft;
+    renderLista();
+    $('filtros').scrollLeft = x;
+    const sel = $('filtros').querySelector('[aria-pressed="true"]');
+    if (sel) try { sel.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch (e) {}
+  });
+  $('estab').addEventListener('input', renderResumo);
+
+  $('lista').addEventListener('click', e => {
+    const mais = e.target.closest('button[data-mais]');
+    if (mais) { const it = itens[Number(mais.dataset.mais)]; if (it) { it.qtd = qtdDe(it) + 1; salvar(); } return; }
+    const menos = e.target.closest('button[data-menos]');
+    if (menos) { const it = itens[Number(menos.dataset.menos)]; if (it && qtdDe(it) > 1) { it.qtd = qtdDe(it) - 1; salvar(); } return; }
+    const ed = e.target.closest('button[data-e]');
+    if (ed) {
+      editando = Number(ed.dataset.e);
+      renderLista();
+      const inp = $('lista').querySelector('.ed-nome');
+      if (inp) { inp.focus(); inp.select(); }
+      return;
+    }
+    const sv = e.target.closest('button[data-salvar]');
+    if (sv) { salvarEdicao(Number(sv.dataset.salvar), sv.closest('li')); return; }
+    if (e.target.closest('button[data-cancelar]')) { editando = -1; msg(''); renderLista(); return; }
+    const b = e.target.closest('button[data-i]');
+    if (!b) return;
+    const i = Number(b.dataset.i);
+    if (editando === i) editando = -1; else if (editando > i) editando--;
+    itens.splice(i, 1);
+    salvar();
+  });
+
+  $('lista').addEventListener('keydown', e => {
+    const li = e.target.closest('li.editando');
+    if (!li) return;
+    if (e.key === 'Enter') { e.preventDefault(); salvarEdicao(Number(li.querySelector('[data-salvar]').dataset.salvar), li); }
+    if (e.key === 'Escape') { editando = -1; renderLista(); }
+  });
+
+  $('lista').addEventListener('change', e => {
+    const s = e.target.closest('select[data-ci]');
+    if (!s) return;
+    const it = itens[Number(s.dataset.ci)];
+    if (!it) return;
+    it.cat = s.value;
+    salvar();
+  });
+
+  let armado = null;
+  function resetLimpar() {
+    armado = null;
+    const b = $('limpar');
+    b.textContent = 'Limpar lista';
+    b.classList.add('ghost'); b.classList.remove('danger');
+  }
+  $('limpar').addEventListener('click', () => {
+    const b = $('limpar');
+    if (!armado) {
+      b.textContent = 'Toque de novo para apagar';
+      b.classList.remove('ghost'); b.classList.add('danger');
+      armado = setTimeout(resetLimpar, 4000);
+      return;
+    }
+    clearTimeout(armado);
+    resetLimpar();
+    itens = [];
+    salvar();
+    msg('');
+  });
+
+  // ---------- finalizar compra ----------
+  // Vira um gasto de Compras guardando os itens, para abrir depois no mês da compra
+  $('finalizar').addEventListener('click', () => {
+    const local = $('estab').value.trim().replace(/\s+/g, ' ');
+    if (!itens.length) { msg('A lista está vazia.'); return; }
+    if (!local) { msg('Informe o estabelecimento antes de finalizar.'); return; }
+    const hoje = hojeISO();
+    // Separa os itens por categoria: cada uma vira um gasto e conta no seu limite
+    const grupos = {};
+    itens.forEach(it => {
+      const c = CATS.includes(it.cat) ? it.cat : categoria(it.nome);
+      (grupos[c] = grupos[c] || []).push(it);
+    });
+    let id = Date.now();
+    const compra = id;
+    CATS.forEach(c => {
+      const g = grupos[c];
+      if (!g) return;
+      gastos.push({
+        id: id++,
+        cat: c,
+        valor: somaItens(g),
+        data: hoje,
+        local,
+        compra,
+        itens: g.map(it => ({ nome: it.nome, preco: it.preco, qtd: qtdDe(it) }))
+      });
+    });
+    itens = [];
+    $('estab').value = '';
+    $('mesSel').value = hoje.slice(0, 7);
+    msg('');
+    salvar();
+    salvarGastos();
+    abertos.add('c' + compra);
+    destaque = 'c' + compra;
+    renderGastos();
+    mostrarAba('gastos');
+    $('gastos').firstElementChild && $('gastos').firstElementChild.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ---------- gastos ----------
+  const abertos = new Set();
+
+  $('mesSel').value = mesAtual();
+  $('gdata').value = hojeISO();
+
+  function gastosDoMes() {
+    const mes = $('mesSel').value || mesAtual();
+    return gastos.filter(g => g.data.slice(0, 7) === mes);
+  }
+
+  function totaisPorCat() {
+    const t = {};
+    CATS.forEach(c => t[c] = 0);
+    gastosDoMes().forEach(g => { t[g.cat] = (t[g.cat] || 0) + g.valor; });
+    return t;
+  }
+
+  function renderGastos() {
+    const doMes = gastosDoMes();
+    const porCat = totaisPorCat();
+    $('cats').innerHTML = CATS.map(c =>
+      `<div class="cat"><span>${esc(c)}</span><strong>${brl(r2(porCat[c]))}</strong></div>`
+    ).join('');
+    // Uma compra finalizada vira um cartão só, com todos os itens juntos
+    const grupos = new Map();
+    doMes.forEach(g => {
+      const k = g.compra ? 'c' + g.compra : (g.local && Array.isArray(g.itens) && g.itens.length ? 'l' + g.data + '|' + g.local + '|' + Math.floor(g.id / 1000) : 'g' + g.id);
+      let c = grupos.get(k);
+      if (!c) { c = { k, data: g.data, local: g.local || '', id: g.id, valor: 0, partes: [] }; grupos.set(k, c); }
+      c.valor = r2(c.valor + g.valor); c.id = Math.max(c.id, g.id); c.partes.push(g);
+    });
+    const lista = [...grupos.values()].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+    $('gastos').innerHTML = lista.map(c => {
+      const partes = c.partes.slice().sort((a, b) => CATS.indexOf(a.cat) - CATS.indexOf(b.cat));
+      const itensTodos = partes.flatMap(g => Array.isArray(g.itens) ? g.itens : []);
+      const n = itensTodos.reduce((s, it) => s + qtdDe(it), 0);
+      const aberto = abertos.has(c.k);
+      const chips = partes.map(g => `<i class="gchip" style="--c:${COR_CAT[g.cat] || '#6b7b8c'}">${ICONE_CAT[g.cat] || ''} ${esc(g.cat)}</i>`).join('');
+      const titulo = c.local || partes[0].cat;
+      const det = aberto ? `<div class="gdet">${partes.map(g => `<div class="gcat" style="--c:${COR_CAT[g.cat] || '#6b7b8c'}"><div class="gcat-h"><span>${ICONE_CAT[g.cat] || ''} ${esc(g.cat)}</span><b>${brl(g.valor)}</b></div>${Array.isArray(g.itens) && g.itens.length
+          ? `<ul class="itens">${g.itens.map(it => `<li><span>${qtdDe(it) > 1 ? qtdDe(it) + '× ' : ''}${esc(it.nome)}</span><span>${brl(subtotal(it))}</span></li>`).join('')}</ul>` : ''}</div>`).join('')}<div class="gtot"><span>Total da compra${n ? ` · ${n} ${n === 1 ? 'item' : 'itens'}` : ''}</span><b>${brl(c.valor)}</b></div></div>` : '';
+      const temDet = itensTodos.length || partes.length > 1;
+      const bt = temDet ? `<button type="button" data-abrir="${esc(c.k)}" class="ghost">${aberto ? 'Fechar' : 'Itens'}</button>` : '';
+      const rem = armadoGasto === c.k
+        ? `<button type="button" data-rem="${esc(c.k)}" class="danger">Apagar?</button>`
+        : `<button type="button" data-rem="${esc(c.k)}" aria-label="Remover ${esc(titulo)}">Remover</button>`;
+      return `<li class="gasto${c.k === destaque ? ' novo' : ''}"><div class="gtop"><b>${esc(titulo)}</b><span class="preco">${brl(c.valor)}</span></div><small class="gsub">${formatData(c.data)}${n ? ` · ${n} ${n === 1 ? 'item' : 'itens'}` : ''}</small><div class="gchips">${chips}</div><div class="gbtns">${bt}${rem}</div>${det}</li>`;
+    }).join('');
+    destaque = null;
+    $('gvazio').hidden = doMes.length > 0;
+    $('gtotal').textContent = brl(r2(doMes.reduce((s, g) => s + g.valor, 0)));
+  }
+
+  $('gform').addEventListener('submit', e => {
+    e.preventDefault();
+    const valor = parsePreco($('gvalor').value);
+    const data = $('gdata').value;
+    if (!data) { gmsg('Escolha a data da compra.'); return; }
+    if (!isFinite(valor) || valor <= 0) { gmsg('Digite um valor válido, como 42,90.'); return; }
+    gastos.push({ id: Date.now(), cat: $('gcat').value, valor: r2(valor), data });
+    gmsg('');
+    $('gvalor').value = '';
+    $('mesSel').value = data.slice(0, 7);
+    salvarGastos();
+    $('gvalor').focus();
+  });
+
+  let armadoGasto = null, armadoTimer = null, destaque = null;
+  $('gastos').addEventListener('click', e => {
+    const ab = e.target.closest('button[data-abrir]');
+    if (ab) {
+      const k = ab.dataset.abrir;
+      if (abertos.has(k)) abertos.delete(k); else abertos.add(k);
+      renderGastos();
+      return;
+    }
+    const b = e.target.closest('button[data-rem]');
+    if (!b) return;
+    const k = b.dataset.rem;
+    // Toque duas vezes para apagar (uma compra pode ter vários itens)
+    if (armadoGasto !== k) {
+      armadoGasto = k; clearTimeout(armadoTimer);
+      armadoTimer = setTimeout(() => { armadoGasto = null; renderGastos(); }, 4000);
+      renderGastos();
+      return;
+    }
+    clearTimeout(armadoTimer); armadoGasto = null;
+    const ids = new Set();
+    gastosDoMes().forEach(g => {
+      const kk = g.compra ? 'c' + g.compra : (g.local && Array.isArray(g.itens) && g.itens.length ? 'l' + g.data + '|' + g.local + '|' + Math.floor(g.id / 1000) : 'g' + g.id);
+      if (kk === k) ids.add(g.id);
+    });
+    gastos = gastos.filter(g => !ids.has(g.id));
+    abertos.delete(k);
+    salvarGastos();
+  });
+
+  $('mesSel').addEventListener('change', () => { renderGastos(); renderLimite(); });
+
+  // ---------- histórico ----------
+  let hPer = 'semana', hSub = 'hist';
+  const hAbertos = new Set();
+  const COR_CAT = { Compras: '#2e9e5b', Padaria: '#f2b705', Hortifruti: '#e7772b', 'Açougue': '#d9413a', Limpeza: '#2f7fd1', 'Higiene pessoal': '#8e5bd6', Outros: '#6b7b8c' };
+  function inicioPeriodo() {
+    const d = new Date();
+    d.setDate(d.getDate() - (hPer === 'semana' ? 6 : hPer === 'mes' ? 29 : 364));
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  // Junta os gastos de uma mesma compra (uma finalização vira vários gastos, um por categoria)
+  function comprasDoPeriodo() {
+    const ini = inicioPeriodo(), fim = hojeISO();
+    const mapa = new Map();
+    gastos.filter(g => g.data >= ini && g.data <= fim).forEach(g => {
+      const k = g.compra ? 'c' + g.compra : (g.local && g.itens ? g.data + '|' + g.local : 'g' + g.id);
+      let c = mapa.get(k);
+      if (!c) { c = { k, data: g.data, local: g.local || '', cats: [], valor: 0, itens: [], id: g.id }; mapa.set(k, c); }
+      c.valor = r2(c.valor + g.valor);
+      if (!c.cats.includes(g.cat)) c.cats.push(g.cat);
+      if (Array.isArray(g.itens)) c.itens.push(...g.itens);
+      c.id = Math.max(c.id, g.id);
+    });
+    return [...mapa.values()].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+  }
+  function linhaBarra(rot, valor, max, cor, extra) {
+    const pct = max > 0 ? Math.max(2, (valor / max) * 100) : 0;
+    return `<div class="an-lin"><div class="an-top"><span>${rot}</span><b>${brl(r2(valor))}${extra || ''}</b></div><div class="an-bar"><i style="width:${pct}%;background:${cor}"></i></div></div>`;
+  }
+  function renderHistorico() {
+    document.querySelectorAll('#hPer button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === hPer)));
+    document.querySelectorAll('.subtabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.sub === hSub)));
+    $('hSecHist').hidden = hSub !== 'hist';
+    $('hSecAnal').hidden = hSub !== 'anal';
+    const compras = comprasDoPeriodo();
+    const total = r2(compras.reduce((s, c) => s + c.valor, 0));
+    $('hQtd').textContent = compras.length;
+    $('hTotal').textContent = brl(total);
+    $('hMedia').textContent = brl(compras.length ? r2(total / compras.length) : 0);
+    renderDetalhe(compras, total);
+
+    $('hLista').innerHTML = compras.map(c => {
+      const n = c.itens.reduce((s, it) => s + qtdDe(it), 0);
+      const aberto = hAbertos.has(c.k);
+      const titulo = c.local || c.cats.join(', ');
+      const sub = formatData(c.data) + (n ? ` · ${n} ${n === 1 ? 'item' : 'itens'}` : (c.local ? ' · ' + c.cats.join(', ') : ''));
+      const det = aberto && c.itens.length
+        ? `<ul class="itens">${c.itens.map(it => `<li><span>${qtdDe(it) > 1 ? qtdDe(it) + '× ' : ''}${esc(it.nome)}</span><span>${brl(subtotal(it))}</span></li>`).join('')}</ul>` : '';
+      const bt = c.itens.length ? `<button type="button" class="ghost" data-h="${esc(c.k)}">${aberto ? 'Fechar' : 'Itens'}</button>` : '';
+      return `<li><div class="linha"><span class="nome"><b>${esc(titulo)}</b><small>${esc(sub)}</small></span><span class="preco">${brl(c.valor)}</span>${bt}</div>${det}</li>`;
+    }).join('');
+    $('hVazio').hidden = compras.length > 0;
+
+    // Análise
+    const porCat = {};
+    const prod = new Map(), lojas = new Map();
+    compras.forEach(c => {
+      if (c.local) lojas.set(c.local, { v: r2((lojas.get(c.local)?.v || 0) + c.valor), n: (lojas.get(c.local)?.n || 0) + 1 });
+      c.itens.forEach(it => {
+        const k = semAcento(it.nome);
+        const p = prod.get(k) || { nome: it.nome, v: 0, q: 0 };
+        p.v = r2(p.v + subtotal(it)); p.q += qtdDe(it); prod.set(k, p);
+      });
+    });
+    const ini = inicioPeriodo(), fim = hojeISO();
+    gastos.filter(g => g.data >= ini && g.data <= fim).forEach(g => { porCat[g.cat] = r2((porCat[g.cat] || 0) + g.valor); });
+    const cats = CATS.filter(c => porCat[c] > 0).sort((a, b) => porCat[b] - porCat[a]);
+    const vazioAn = '<p class="status" style="margin:0">Sem dados neste período.</p>';
+    $('anCats').innerHTML = cats.length ? cats.map(c =>
+      linhaBarra(esc(c), porCat[c], porCat[cats[0]], COR_CAT[c] || '#7470b5', total ? ` · ${Math.round(porCat[c] / total * 100)}%` : '')).join('') : vazioAn;
+    const top = [...prod.values()].sort((a, b) => b.v - a.v).slice(0, 5);
+    $('anProd').innerHTML = top.length ? top.map(p =>
+      linhaBarra(`${esc(p.nome)} <small>(${p.q} un.)</small>`, p.v, top[0].v, '#7470b5')).join('') : vazioAn;
+    const ls = [...lojas.entries()].sort((a, b) => b[1].v - a[1].v);
+    $('anLojas').innerHTML = ls.length ? ls.map(([nome, x]) =>
+      linhaBarra(`${esc(nome)} <small>(${x.n} ${x.n === 1 ? 'compra' : 'compras'})</small>`, x.v, ls[0][1].v, '#f2b705')).join('') : vazioAn;
+  }
+  let hDet = null;
+  const NOME_PER = { semana: 'últimos 7 dias', mes: 'últimos 30 dias', ano: 'últimos 365 dias' };
+  const DIAS_PER = { semana: 7, mes: 30, ano: 365 };
+  function totalPeriodoAnterior() {
+    const d = new Date(), p = n => String(n).padStart(2, '0'), iso = x => x.getFullYear() + '-' + p(x.getMonth() + 1) + '-' + p(x.getDate());
+    const fim = new Date(d); fim.setDate(d.getDate() - DIAS_PER[hPer]);
+    const ini = new Date(d); ini.setDate(d.getDate() - 2 * DIAS_PER[hPer] + 1);
+    return r2(gastos.filter(g => g.data >= iso(ini) && g.data <= iso(fim)).reduce((s, g) => s + g.valor, 0));
+  }
+  function renderDetalhe(compras, total) {
+    document.querySelectorAll('button.hstat').forEach(b => b.setAttribute('aria-expanded', String(b.dataset.det === hDet)));
+    const box = $('hDet');
+    if (!hDet) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.dataset.cor = hDet;
+    const lin = (rot, val, sub) => `<div class="lin"><span>${rot}</span><b>${val}${sub ? `<small>${sub}</small>` : ''}</b></div>`;
+    const fechar = '<button type="button" data-fechar>Fechar</button>';
+    const nomeC = c => esc(c.local || c.cats.join(', '));
+    let h = '';
+    if (!compras.length) {
+      h = `<h3>${hDet === 'media' ? 'Média' : hDet === 'compras' ? 'Compras' : 'Total'} ${fechar}</h3><p class="status" style="margin:0">Nenhuma compra nos ${NOME_PER[hPer]}.</p>`;
+    } else if (hDet === 'media') {
+      const ord = compras.slice().sort((a, b) => b.valor - a.valor);
+      const maior = ord[0], menor = ord[ord.length - 1];
+      const nItens = compras.reduce((s, c) => s + c.itens.reduce((t, it) => t + qtdDe(it), 0), 0);
+      h = `<h3>Média dos ${NOME_PER[hPer]} ${fechar}</h3>`
+        + lin('Média por compra', brl(r2(total / compras.length)))
+        + lin('Média por dia', brl(r2(total / DIAS_PER[hPer])))
+        + (hPer !== 'semana' ? lin('Média por semana', brl(r2(total / DIAS_PER[hPer] * 7))) : '')
+        + (nItens ? lin('Média por item', brl(r2(compras.filter(c => c.itens.length).reduce((s, c) => s + c.valor, 0) / nItens)), nItens + ' itens') : '')
+        + lin('Maior compra', brl(maior.valor), nomeC(maior) + ' · ' + formatData(maior.data))
+        + (compras.length > 1 ? lin('Menor compra', brl(menor.valor), nomeC(menor) + ' · ' + formatData(menor.data)) : '');
+    } else if (hDet === 'compras') {
+      h = `<h3>${compras.length} ${compras.length === 1 ? 'compra' : 'compras'} nos ${NOME_PER[hPer]} ${fechar}</h3>`
+        + compras.map(c => {
+            const n = c.itens.reduce((s, it) => s + qtdDe(it), 0);
+            return lin(`${nomeC(c)}<small>${formatData(c.data)}${n ? ' · ' + n + (n === 1 ? ' item' : ' itens') : ''}</small>`, brl(c.valor));
+          }).join('');
+    } else {
+      const ant = totalPeriodoAnterior();
+      const dif = r2(total - ant);
+      const porCat = {};
+      const ini = inicioPeriodo(), fim = hojeISO();
+      gastos.filter(g => g.data >= ini && g.data <= fim).forEach(g => { porCat[g.cat] = r2((porCat[g.cat] || 0) + g.valor); });
+      h = `<h3>Total dos ${NOME_PER[hPer]} ${fechar}</h3>`
+        + lin('Total gasto', brl(total))
+        + lin('Período anterior', brl(ant), ant > 0 ? `<span class="${dif > 0 ? 'sobe' : 'desce'}">${dif > 0 ? '▲ ' + brl(dif) + ' a mais' : dif < 0 ? '▼ ' + brl(-dif) + ' a menos' : 'igual'}</span>` : 'sem gastos')
+        + CATS.filter(c => porCat[c] > 0).sort((a, b) => porCat[b] - porCat[a]).map(c => lin(esc(c), brl(porCat[c]), Math.round(porCat[c] / total * 100) + '%')).join('');
+    }
+    box.innerHTML = h;
+  }
+  document.querySelector('.hstats').addEventListener('click', e => {
+    const b = e.target.closest('button[data-det]');
+    if (!b) return;
+    hDet = hDet === b.dataset.det ? null : b.dataset.det;
+    renderHistorico();
+  });
+  $('hDet').addEventListener('click', e => { if (e.target.closest('[data-fechar]')) { hDet = null; renderHistorico(); } });
+  $('hPer').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) { hPer = b.dataset.p; renderHistorico(); } });
+  document.querySelector('.subtabs').addEventListener('click', e => { const b = e.target.closest('button[data-sub]'); if (b) { hSub = b.dataset.sub; renderHistorico(); } });
+  $('hLista').addEventListener('click', e => {
+    const b = e.target.closest('button[data-h]');
+    if (!b) return;
+    const k = b.dataset.h;
+    if (hAbertos.has(k)) hAbertos.delete(k); else hAbertos.add(k);
+    renderHistorico();
+  });
+
+  // ---------- limite ----------
+  function lerValor(id) {
+    const s = $(id).value.trim();
+    if (!s) return null;
+    const v = parsePreco(s);
+    return isFinite(v) && v > 0 ? r2(v) : NaN;
+  }
+
+  function preencherLimites() {
+    $('lTotal').value = limites.total != null ? limites.total.toFixed(2).replace('.', ',') : '';
+    CATS.forEach(c => {
+      const v = limites.cats[c];
+      $(CAT_IDS[c]).value = v != null ? v.toFixed(2).replace('.', ',') : '';
+    });
+  }
+
+  // Verde até 50% do limite; a partir daí a cor vai ficando vermelha até chegar em 100%
+  function corProgresso(p) {
+    const verde = [35, 102, 63], vermelho = [168, 50, 42];
+    const t = Math.max(0, Math.min(1, (p - 50) / 50));
+    const c = verde.map((v, i) => Math.round(v + (vermelho[i] - v) * t));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  }
+
+  function barra(gasto, limite) {
+    const bruto = (gasto / limite) * 100;
+    const pct = Math.min(100, bruto);
+    return { pct, cor: corProgresso(bruto), cls: '' };
+  }
+
+  function renderLimite() {
+    const mes = $('mesSel').value || mesAtual();
+    $('limMes').textContent = formatMes(mes);
+    const porCat = totaisPorCat();
+    const gastoTotal = r2(gastosDoMes().reduce((s, g) => s + g.valor, 0));
+
+    if (limites.total != null) {
+      const b = barra(gastoTotal, limites.total);
+      $('limBarra').style.width = b.pct + '%';
+      $('limBarra').className = '';
+      $('limBarra').style.background = '#d9413a';
+      $('limTxt').textContent = `${brl(gastoTotal)} de ${brl(limites.total)}`;
+      const restante = r2(limites.total - gastoTotal);
+      $('limStatus').textContent = restante >= 0
+        ? `Faltam ${brl(restante)} para o limite.`
+        : `Passou do limite em ${brl(-restante)}.`;
+    } else {
+      $('limBarra').style.width = '0%';
+      $('limBarra').className = '';
+      $('limTxt').textContent = `${brl(gastoTotal)} gastos`;
+      $('limStatus').textContent = 'Defina um limite total acima para acompanhar.';
+    }
+
+    $('limCats').innerHTML = CATS.map(c => {
+      const lim = limites.cats[c];
+      if (lim == null) {
+        return `<div class="cat"><span>${esc(c)}</span><strong>${brl(r2(porCat[c]))}</strong><span>sem limite</span></div>`;
+      }
+      const b = barra(porCat[c], lim);
+      return `<div class="cat"><span>${esc(c)}</span><strong>${brl(r2(porCat[c]))}</strong><span>de ${brl(lim)}</span><div class="barra" style="margin-top:6px"><i style="width:${b.pct}%;background:${b.cor}"></i></div></div>`;
+    }).join('');
+  }
+
+  $('lform').addEventListener('submit', e => {
+    e.preventDefault();
+    const total = lerValor('lTotal');
+    if (Number.isNaN(total)) { lmsg('Limite total inválido. Use um valor como 1.200,00.'); return; }
+    const cats = {};
+    for (const c of CATS) {
+      const v = lerValor(CAT_IDS[c]);
+      if (Number.isNaN(v)) { lmsg(`Limite de ${c} inválido.`); return; }
+      if (v != null) cats[c] = v;
+    }
+    limites = { total, cats };
+    lmsg('Limites salvos.');
+    salvarLimites();
+  });
+
+  // ---------- voz ----------
+  const UNID = new Map(Object.entries({
+    zero: 0, um: 1, uma: 1, dois: 2, duas: 2, três: 3, tres: 3, quatro: 4, cinco: 5, seis: 6,
+    sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, treze: 13, catorze: 14, quatorze: 14,
+    quinze: 15, dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30,
+    quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100
+  }));
+  const SEP = new Set(['vírgula', 'virgula', 'ponto', 'reais', 'real']);
+  const IGN = new Set(['centavos', 'centavo']);
+
+  function numerosFalados(texto) {
+    texto = String(texto)
+      .replace(/R\$\s*/gi, ' ')                      // "R$ 5,50" -> "5,50"
+      .replace(/(\d)\.(\d{1,2})(?!\d)/g, '$1,$2')    // "5.50" -> "5,50"
+      .replace(/(\d)(?=[a-zà-ú])/gi, '$1 ');         // "5reais" -> "5 reais"
+    const t = texto.toLowerCase().split(/\s+/).map(w => w.replace(/^[^\wà-ú]+|[^\wà-ú]+$/g, '')).filter(Boolean);
+    // número falado por extenso ou escrito com algarismos inteiros
+    const val = w => UNID.has(w) ? UNID.get(w) : (/^\d+$/.test(w) ? Number(w) : undefined);
+    const ehNum = w => w !== undefined && val(w) !== undefined;
+    const out = [];
+    let acc = null;
+    const flush = () => { if (acc !== null) { out.push(String(acc)); acc = null; } };
+    for (let i = 0; i < t.length; i++) {
+      const w = t[i], prox = t[i + 1];
+      if ((w === 'um' || w === 'uma') && !(prox && (ehNum(prox) || SEP.has(prox)))) { flush(); out.push(w); continue; }
+      if (ehNum(w)) { acc = (acc || 0) + val(w); continue; }
+      // "cinco e cinquenta" = 5,50 (mas "vinte e cinco" = 25 e "cem e vinte" = 120)
+      if (w === 'e' && acc !== null && acc < 100 && ehNum(prox) && val(prox) >= 10 && val(prox) < 100 && out[out.length - 1] !== ',') { flush(); out.push(','); continue; }
+      if (w === 'e' && ehNum(prox) && (acc !== null || out[out.length - 1] === ',')) continue;
+      if (SEP.has(w)) { flush(); out.push(','); continue; }
+      if (IGN.has(w)) continue;
+      flush(); out.push(w);
+    }
+    flush();
+    let s = '';
+    for (const x of out) s += x === ',' ? ',' : (s && !s.endsWith(',') ? ' ' : '') + x;
+    return s;
+  }
+
+  // Número seguido de unidade ("2 quilos", "500 gramas", "1,5 litro") é quantidade: fica no nome, não é preço
+  const UNIDADE = /^\s*(?:kg|kgs|quilos?|kilos?|quilogramas?|g|gr|gramas?|mg|l|lt|lts|litros?|ml|mililitros?|un|und|unid|unidades?|pct|pcts|pacotes?|cx|caixas?|d[uú]zias?|latas?|garrafas?|rolos?|fardos?|m|metros?|cm|sacos?|bandejas?|vidros?|potes?|ma[çc]os?|pe[çc]as?|x|vezes)(?![a-zà-ú])/i;
+  function interpretarFala(texto) {
+    const s = numerosFalados(texto);
+    const m = [...s.matchAll(/\d+(?:,\d+)?/g)].filter(x => !UNIDADE.test(s.slice(x.index + x[0].length)));
+    if (!m.length) return null;
+    const ult = m[m.length - 1];
+    // O nome é tudo menos o preço (a quantidade continua no nome, falada antes ou depois do preço)
+    const nome = (s.slice(0, ult.index) + ' ' + s.slice(ult.index + ult[0].length))
+      .replace(/(?<!\d),|,(?!\d)/g, ' ').replace(/\s+/g, ' ').trim();
+    return { nome, preco: parsePreco(ult[0]) };
+  }
+
+  // ---------- voz do Google ----------
+  const TTS = window.speechSynthesis;
+  let vozGoogle = null, vozLigada = false, falandoAgora = false;
+  let pausarEscuta = () => {}, retomarEscuta = () => {};
+
+  // Escolhe "Google português do Brasil"; se não existir no aparelho, usa outra voz pt-BR
+  function escolherVoz() {
+    if (!TTS) return;
+    const vs = TTS.getVoices() || [];
+    const pt = vs.filter(v => /^pt[-_]BR$/i.test(v.lang) || /portugu[eê]s do brasil/i.test(v.name));
+    vozGoogle = pt.find(v => /google/i.test(v.name)) || vs.find(v => /google/i.test(v.name) && /^pt/i.test(v.lang)) || pt[0] || null;
+    const el = $('powerVoz');
+    if (el) el.textContent = vozGoogle
+      ? 'Voz: ' + vozGoogle.name + (/google/i.test(vozGoogle.name) ? '' : ' (voz do Google não disponível neste aparelho)')
+      : '';
+  }
+  if (TTS) { escolherVoz(); try { TTS.addEventListener('voiceschanged', escolherVoz); } catch (e) { TTS.onvoiceschanged = escolherVoz; } }
+
+  function valorFalado(v) {
+    const reais = Math.floor(v + 1e-9), cent = Math.round((v - reais) * 100);
+    const r = reais ? reais + (reais === 1 ? ' real' : ' reais') : '';
+    const c = cent ? cent + (cent === 1 ? ' centavo' : ' centavos') : '';
+    return r && c ? r + ' e ' + c : (r || c || 'zero reais');
+  }
+
+  // Fala com a voz do Google. O microfone pausa enquanto ela fala e volta sozinho depois.
+  function falar(texto) {
+    if (!TTS || !vozLigada) return;
+    try {
+      pausarEscuta();
+      TTS.cancel();
+      const u = new SpeechSynthesisUtterance(texto);
+      u.lang = 'pt-BR';
+      if (vozGoogle) u.voice = vozGoogle;
+      u.rate = 1.05;
+      falandoAgora = true;
+      $('mic').classList.add('falando');
+      let terminou = false;
+      const fim = () => {
+        if (terminou) return;
+        terminou = true; falandoAgora = false;
+        $('mic').classList.remove('falando');
+        retomarEscuta();
+      };
+      u.onend = fim; u.onerror = fim;
+      TTS.speak(u);
+      setTimeout(fim, Math.min(15000, 2500 + texto.length * 90)); // segurança se o navegador não avisar o fim
+    } catch (e) { falandoAgora = false; retomarEscuta(); }
+  }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const mic = $('mic');
+  const status = t => { $('powerTxt').textContent = t; };
+  const atualizarPower = (ligado, texto) => {
+    mic.classList.toggle('ligado', ligado);
+    mic.setAttribute('aria-pressed', String(ligado));
+    mic.setAttribute('aria-label', ligado ? 'Desligar assistente de voz' : 'Ligar assistente de voz');
+    status(texto || (ligado ? '🎙️ Ouvindo… pode falar' : 'Voz desligada'));
+  };
+
+  // Modo teclado: quando a página não pode usar o microfone direto, o power usa o 🎤 do teclado
+  let modoTeclado = false;
+  const TKEY = 'voz-pelo-teclado-v1';
+  const usarTecladoDireto = () => { try { return localStorage.getItem(TKEY) === '1'; } catch (e) { return false; } };
+  const lembrarTeclado = v => { try { v ? localStorage.setItem(TKEY, '1') : localStorage.removeItem(TKEY); } catch (e) {} };
+  function ligarModoTeclado(motivo) {
+    modoTeclado = true; vozLigada = true;
+    escolherVoz();
+    atualizarPower(true, '⌨️ Toque no 🎤 do teclado e fale');
+    $('msg').classList.remove('ok');
+    msg((motivo ? motivo + ' ' : '') + 'Toque no 🎤 do teclado (comando de voz do Google) e fale: “arroz cinco e cinquenta, adiciona”. A voz do Google confirma cada item.');
+    // Abre o teclado já no campo Produto
+    try { const n = $('nome'); n.focus(); n.scrollIntoView({ block: 'center' }); } catch (e) {}
+  }
+  function desligarModoTeclado() {
+    modoTeclado = false;
+    falar('Voz desligada.');
+    vozLigada = false;
+    atualizarPower(false); msg('');
+  }
+
+  // O navegador deixa esta página usar o microfone? (dentro de alguns apps ele bloqueia)
+  const politica = document.permissionsPolicy || document.featurePolicy;
+  const micBloqueadoNaPagina = !!(politica && politica.allowsFeature && !politica.allowsFeature('microphone'));
+
+  if (!SR || micBloqueadoNaPagina) {
+    if (!SR && !TTS) { mic.disabled = true; atualizarPower(false, 'Voz indisponível neste aparelho'); }
+    mic.addEventListener('click', () => {
+      if (modoTeclado) { desligarModoTeclado(); return; }
+      ligarModoTeclado(micBloqueadoNaPagina
+        ? 'Aqui o navegador não deixa a página usar o microfone direto.'
+        : 'Este navegador não tem reconhecimento de voz.');
+    });
+  } else {
+    const rec = new SR();
+    rec.lang = 'pt-BR';
+    rec.continuous = false;      // uma frase por vez: mais confiável no celular
+    rec.interimResults = true;   // mostra na tela o que está sendo ouvido
+    rec.maxAlternatives = 1;
+    let ouvindo = false, ativo = false, semFala = 0, falhasRede = 0, timer = null;
+    let recebeuAudio = false, vigia = null;
+
+    const iniciar = () => {
+      if (!ouvindo || ativo || falandoAgora) return;
+      try { rec.start(); ativo = true; } catch (e) {}
+    };
+    retomarEscuta = () => { clearTimeout(timer); timer = setTimeout(iniciar, 300); };
+    pausarEscuta = () => { clearTimeout(timer); if (ativo) { try { rec.abort(); } catch (e) {} } };
+
+    function desligar(aviso) {
+      ouvindo = false;
+      clearTimeout(vigia);
+      pausarEscuta();
+      atualizarPower(false);
+      if (aviso) msg(aviso);
+    }
+    // O microfone direto não funcionou: passa para o microfone do teclado
+    function irParaTeclado(motivo) {
+      lembrarTeclado(true); // nas próximas vezes o power já abre o teclado direto
+      desligar();
+      ligarModoTeclado(motivo);
+    }
+
+    // Coloca o que foi falado nos campos (sem lançar ainda)
+    function preencher(t) {
+      t = t.trim().replace(/[.,!?]+$/, '');
+      if (!t) return null;
+      $('msg').classList.remove('ok');
+      const r = interpretarFala(t);
+      if (r && r.nome) {
+        $('nome').value = r.nome;
+        $('preco').value = r.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else if (r) {
+        $('preco').value = r.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else {
+        $('nome').value = t;
+      }
+      const temPreco = parsePreco($('preco').value) > 0;
+      msg('Ouvi: “' + t + '”. ' + (temPreco ? 'Agora diga “adiciona”.' : 'Agora fale o preço e diga “adiciona”.'));
+      return r;
+    }
+
+    // "adiciona" (ou "pronto") na fala lança o item; o resto preenche os campos
+    function processarFala(texto) {
+      const RE = /(^|[\s.,!?])(?:adicion(?:a|ar|e|ado|ou)|pronto|lança|lançar)(?![a-zà-ú])[.,!?]*/gi;
+      const merc = comoMercado(texto.replace(RE, ' '));
+      if (merc) { definirMercado(merc); return; }
+      let ini = 0, m, adicionou = false;
+      while ((m = RE.exec(texto))) {
+        preencher(texto.slice(ini, m.index + m[1].length));
+        if (enviarCampos()) adicionou = true;
+        else { msg('Ouvi “adiciona”, mas falta o produto ou o preço.'); falar('Faltou o produto ou o preço.'); }
+        ini = RE.lastIndex;
+      }
+      const resto = texto.slice(ini).trim();
+      if (!resto) return;
+      const r = preencher(resto);
+      if (adicionou) return; // não corta a confirmação do item adicionado
+      const nome = $('nome').value.trim();
+      const preco = parsePreco($('preco').value);
+      if (nome && isFinite(preco) && preco > 0) falar('Ouvi ' + nome + ', ' + valorFalado(preco) + '. Diga adiciona.');
+      else if (nome) falar('Ouvi ' + nome + '. Agora fale o preço.');
+      else if (r) falar('Ouvi ' + valorFalado(r.preco) + '. Agora fale o produto.');
+    }
+
+    const marcarAudio = () => { recebeuAudio = true; clearTimeout(vigia); };
+    // Se o microfone direto ouviu de verdade, ele funciona neste aparelho
+    const funcionou = () => lembrarTeclado(false);
+    rec.onstart = () => { ativo = true; if (ouvindo && !falandoAgora) status('🎙️ Ouvindo… pode falar'); };
+    rec.onaudiostart = () => { marcarAudio(); if (ouvindo && !falandoAgora) status('🎙️ Microfone ligado — pode falar'); };
+    rec.onsoundstart = marcarAudio;
+    rec.onspeechstart = () => { marcarAudio(); if (ouvindo) status('🎙️ Escutando você…'); };
+    rec.onresult = e => {
+      marcarAudio();
+      if (falandoAgora) return;
+      semFala = 0; falhasRede = 0;
+      let parcial = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) { funcionou(); processarFala(r[0].transcript); }
+        else parcial += r[0].transcript;
+      }
+      if (parcial) { $('msg').classList.remove('ok'); msg('… ' + parcial); }
+    };
+    rec.onend = () => {
+      ativo = false;
+      if (ouvindo) retomarEscuta();
+      else if (!modoTeclado) atualizarPower(false);
+    };
+    rec.onerror = e => {
+      const err = e && e.error;
+      if (err === 'aborted') return;
+      if (err === 'no-speech') {
+        semFala++;
+        if (semFala >= 3) irParaTeclado('Não consegui ouvir sua voz pelo navegador.');
+        else if (semFala >= 2) msg('Não estou ouvindo sua voz. Fale perto do microfone.');
+        return; // continua ouvindo
+      }
+      if (err === 'network') {
+        if (++falhasRede >= 3) desligar('O reconhecimento de voz do Google precisa de internet. Verifique a conexão e toque no power de novo.');
+        return;
+      }
+      if (err === 'not-allowed' || err === 'service-not-allowed') { irParaTeclado('O navegador bloqueou o microfone desta página.'); return; }
+      if (err === 'audio-capture') { irParaTeclado('O navegador não conseguiu abrir o microfone.'); return; }
+      irParaTeclado('O reconhecimento de voz não funcionou aqui (' + (err || 'erro') + ').');
+    };
+
+    mic.addEventListener('click', () => {
+      if (modoTeclado) { desligarModoTeclado(); return; }
+      if (ouvindo) {
+        desligar();
+        msg('');
+        falar('Voz desligada.');
+        vozLigada = false;
+        return;
+      }
+      // Neste aparelho o microfone direto não funciona: abre o teclado já no toque
+      if (usarTecladoDireto()) { ligarModoTeclado(); return; }
+      ouvindo = true; vozLigada = true; semFala = 0; falhasRede = 0; recebeuAudio = false;
+      escolherVoz();
+      atualizarPower(true, '🎙️ Ligando o microfone…');
+      $('msg').classList.remove('ok');
+      msg('Diga o produto e o preço, depois “adiciona”. Ex: “arroz cinco e cinquenta, adiciona”.');
+      // Começa a ouvir já no toque (o celular exige isso para liberar o microfone)
+      iniciar();
+      // Se em 4 segundos o microfone não der sinal de vida, usa o microfone do teclado
+      clearTimeout(vigia);
+      vigia = setTimeout(() => {
+        if (ouvindo && !recebeuAudio) irParaTeclado('O microfone direto não respondeu aqui.');
+      }, 4000);
+    });
+  }
+
+  itens.forEach(it => { if (!CATS.includes(it.cat)) it.cat = categoria(it.nome); if (!(it.qtd >= 1)) it.qtd = 1; });
+  preencherLimites();
+  renderLista();
+  renderGastos();
+  renderLimite();
+  renderHistorico();
+})();
+</script>
+<script>
+  // Permite instalar no celular e abrir sem internet
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  }
+</script>
+</body>
+</html>
